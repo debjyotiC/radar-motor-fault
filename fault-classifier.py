@@ -53,7 +53,7 @@ validation_dataset = validation_dataset.batch(BATCH_SIZE, drop_remainder=False)
 
 history = model.fit(train_dataset, epochs=600, validation_data=validation_dataset)
 
-model.save("saved-model/umbc_tent_3_cfar")
+model.save("saved-model/radar-motor-fault")
 
 predicted_labels = model.predict(x_test)
 actual_labels = y_test
@@ -62,6 +62,8 @@ label_predicted = np.argmax(predicted_labels, axis=1)
 label_actual = np.argmax(actual_labels, axis=1)
 
 results = confusion_matrix(label_actual, label_predicted)
+
+print(results)
 
 acc = history.history['acc']
 val_acc = history.history['val_acc']
