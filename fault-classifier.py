@@ -13,11 +13,13 @@ x_data, y_data = range_doppler_features['out_x'], range_doppler_features['out_y'
 classes_values = listdir("data/radar-motor")
 classes = len(classes_values)
 
+print(classes_values)
+
 y_data = tf.keras.utils.to_categorical(y_data - 1, classes)
 
-train_ratio = 0.80
+train_ratio = 0.70
 validation_ratio = 0.10
-test_ratio = 0.10
+test_ratio = 0.20
 
 x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=1 - train_ratio)
 x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio / (test_ratio + validation_ratio))
@@ -44,14 +46,14 @@ model = tf.keras.Sequential([
 # model.summary()
 
 model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
-              optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001), metrics=['acc'])
+              optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), metrics=['acc'])
 
 # this controls the batch size
 BATCH_SIZE = 10
 train_dataset = train_dataset.batch(BATCH_SIZE, drop_remainder=False)
 validation_dataset = validation_dataset.batch(BATCH_SIZE, drop_remainder=False)
 
-history = model.fit(train_dataset, epochs=600, validation_data=validation_dataset)
+history = model.fit(train_dataset, epochs=100, validation_data=validation_dataset)
 
 model.save("saved-model/radar-motor-fault")
 
@@ -63,7 +65,6 @@ label_actual = np.argmax(actual_labels, axis=1)
 
 results = confusion_matrix(label_actual, label_predicted)
 
-print(results)
 
 acc = history.history['acc']
 val_acc = history.history['val_acc']
