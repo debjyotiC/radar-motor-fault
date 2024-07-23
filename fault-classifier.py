@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 
-range_doppler_features = np.load("data/npz_files/radar-cfar-motor.npz", allow_pickle=True)
+range_doppler_features = np.load("data/npz_files/radar-balanced-cfar-motor.npz", allow_pickle=True)
 
 x_data, y_data = range_doppler_features['out_x'], range_doppler_features['out_y']
 
