@@ -17,8 +17,8 @@ print(classes_values)
 
 y_data = tf.keras.utils.to_categorical(y_data - 1, classes)
 
-train_ratio = 0.70
-validation_ratio = 0.20
+train_ratio = 0.80
+validation_ratio = 0.10
 test_ratio = 0.10
 
 x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=1 - train_ratio)
