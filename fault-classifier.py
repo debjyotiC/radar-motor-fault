@@ -17,9 +17,9 @@ print(classes_values)
 
 y_data = tf.keras.utils.to_categorical(y_data - 1, classes)
 
-train_ratio = 0.80
+train_ratio = 0.70
 validation_ratio = 0.10
-test_ratio = 0.10
+test_ratio = 0.20
 
 x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=1 - train_ratio)
 x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio / (test_ratio + validation_ratio))
@@ -103,5 +103,5 @@ ax.set_title(f'Confusion Matrix for RADAR data with model accuracy {round(np.ave
 ax.xaxis.set_ticklabels(classes_values, fontsize=15)
 ax.yaxis.set_ticklabels(classes_values, fontsize=15)
 plt.tight_layout()
-plt.savefig("images/cm.png", dpi=600)
+plt.savefig("data/images/cm.png", dpi=600)
 plt.show()
