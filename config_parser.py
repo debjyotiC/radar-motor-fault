@@ -50,3 +50,4 @@ def parseConfigFile(configFileName, Rx_Ant, Tx_Ant):
     configParameters["maxVelocity"] = 3e8 / (4 * startFreq * 1e9 * (idleTime + rampEndTime) * 1e-6 * numTxAnt)
 
     return configParameters
+

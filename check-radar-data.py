@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 
 configParameters = parseConfigFile("data/config_files/motor-range-doppler.cfg", Rx_Ant=4, Tx_Ant=4)
 
+print(configParameters)
+
 data = np.load("data/npz_files/radar-motor.npz", allow_pickle=True)
 class_labels = listdir("data/radar-motor")
 
@@ -30,9 +32,9 @@ def apply_2d_cfar(signal, guard_band_width, kernel_size, threshold_factor):
     return threshold_signal
 
 
-for count, frame in enumerate(motor_data):
-    plt.clf()
-    # frame = apply_2d_cfar(frame, guard_band_width=2, kernel_size=1, threshold_factor=1)
-    plt.title(f"Frame no. {count} has label {class_labels[motor_label[count] - 1]}")
-    plt.contourf(frame)
-    plt.pause(1)
+# for count, frame in enumerate(motor_data):
+#     plt.clf()
+#     # frame = apply_2d_cfar(frame, guard_band_width=2, kernel_size=1, threshold_factor=1)
+#     plt.title(f"Frame no. {count} has label {class_labels[motor_label[count] - 1]}")
+#     plt.contourf(frame)
+#     plt.pause(1)
