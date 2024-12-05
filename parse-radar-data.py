@@ -41,6 +41,12 @@ def apply_2d_cfar(signal, guard_band_width, kernel_size, threshold_factor):
                 threshold_signal[i, j] = 1
     return threshold_signal
 
+def min_max_norm(mat):
+    min_val = mat.min()
+    max_val = mat.max()
+    normalized_matrix = 2 * (mat - min_val) / (max_val - min_val) - 1
+    return normalized_matrix
+
 
 def calc_range_doppler(data_frame, packet_id, config):
     payload = data_frame[packet_id].to_numpy()
@@ -51,7 +57,7 @@ def calc_range_doppler(data_frame, packet_id, config):
 
 
 out_x_range_doppler = []
-out_x_range_doppler_cfar = []
+out_x_range_doppler_min_max = []
 out_y_range_doppler = []
 
 for folder_idx, target in enumerate(all_targets):
@@ -64,15 +70,17 @@ for folder_idx, target in enumerate(all_targets):
 
         for col in df_data.columns:
             data = calc_range_doppler(df_data, col, configParameters)
-            cfar_data = apply_2d_cfar(data, guard_band_width=2, kernel_size=1, threshold_factor=1)
+            # cfar_data = apply_2d_cfar(data, guard_band_width=2, kernel_size=1, threshold_factor=1)
+
+            min_max_data = min_max_norm(data)
 
             out_x_range_doppler.append(data)
-            out_x_range_doppler_cfar.append(cfar_data)
+            out_x_range_doppler_min_max.append(min_max_data)
             out_y_range_doppler.append(folder_idx + 1)
 
 data_range_x = np.array(out_x_range_doppler)
-data_range_cfar_x = np.array(out_x_range_doppler_cfar)
+data_range_min_max_x = np.array(out_x_range_doppler_min_max)
 data_range_y = np.array(out_y_range_doppler)
 
 np.savez('data/npz_files/radar-motor.npz', out_x=data_range_x, out_y=data_range_y)
-np.savez('data/npz_files/radar-cfar-motor.npz', out_x=data_range_cfar_x, out_y=data_range_y)
+np.savez('data/npz_files/radar-normalised-motor.npz', out_x=data_range_min_max_x, out_y=data_range_y)
