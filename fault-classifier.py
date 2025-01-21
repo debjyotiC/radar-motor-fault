@@ -29,21 +29,47 @@ train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
 validation_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
 test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
 
-model = tf.keras.Sequential([
-    tf.keras.layers.Reshape((16, 128, 1), input_shape=x_train.shape[1:]),
-    tf.keras.layers.Conv2D(16, (2, 2), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2, 2),
-    tf.keras.layers.Conv2D(16, (2, 2), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2, 2),
-    tf.keras.layers.Conv2D(8, (2, 2), activation='relu', padding='same'),  # Use 'same' padding to maintain dimensions
-    tf.keras.layers.MaxPooling2D((1, 2)),  # Adjust pooling to only reduce width
+# model = tf.keras.Sequential([
+#     tf.keras.layers.Reshape((16, 128, 1), input_shape=x_train.shape[1:]),
+#     tf.keras.layers.Conv2D(16, (2, 2), activation='relu'),
+#     tf.keras.layers.MaxPooling2D(2, 2),
+#     tf.keras.layers.Conv2D(16, (2, 2), activation='relu'),
+#     tf.keras.layers.MaxPooling2D(2, 2),
+#     tf.keras.layers.Conv2D(8, (2, 2), activation='relu', padding='same'),  # Use 'same' padding to maintain dimensions
+#     tf.keras.layers.MaxPooling2D((1, 2)),  # Adjust pooling to only reduce width
+#
+#     tf.keras.layers.Flatten(),
+#     tf.keras.layers.Dense(64, activation='relu'),
+#     tf.keras.layers.Dense(classes, activation='softmax')
+# ])
 
-    tf.keras.layers.Flatten(),
+model = tf.keras.models.Sequential([
+    # Input layer
+    tf.keras.layers.Input(shape=(16, 128, 1)),
+
+    # First convolutional layer
+    tf.keras.layers.Conv2D(16, (2, 2), activation='relu', padding='same'),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 3)),  # Pooling in time (2) and frequency (3)
+
+    # Second convolutional layer
+    tf.keras.layers.Conv2D(16, (2, 2), activation='relu', padding='same'),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+
+    # Reshape for GRU input
+    tf.keras.layers.Reshape((4, -1)),  # Reshape to (time_steps, features). Adjust as per final CNN output shape.
+
+    # GRU layer
+    tf.keras.layers.GRU(30, activation='tanh', return_sequences=False),  # Outputs a single feature vector
+
+    # Dense layer
     tf.keras.layers.Dense(64, activation='relu'),
+
+    # Output layer
     tf.keras.layers.Dense(classes, activation='softmax')
 ])
 
-# model.summary()
+
+model.summary()
 
 model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
               optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), metrics=['acc'])
