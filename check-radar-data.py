@@ -7,7 +7,7 @@ configParameters = parseConfigFile("data/config_files/motor-range-doppler.cfg", 
 
 print(configParameters)
 
-data = np.load("data/npz_files/radar-motor.npz", allow_pickle=True)
+data = np.load("data/npz_files/radar-balanced-motor.npz", allow_pickle=True)
 class_labels = listdir("data/radar-motor")
 
 motor_data, motor_label = data['out_x'], data['out_y']

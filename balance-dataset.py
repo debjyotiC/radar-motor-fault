@@ -15,7 +15,7 @@ print(x_train.shape)
 support_before, count_before = np.unique(y_train, return_counts=True)
 
 # Reshape x_train for SMOTE
-x_train = x_train.reshape(278, 16 * 128)
+x_train = x_train.reshape(x_train.shape[0], 16 * 128)
 
 # Apply SMOTE
 sm = SMOTE(random_state=2)

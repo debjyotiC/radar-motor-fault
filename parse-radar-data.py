@@ -1,3 +1,4 @@
+import random
 import pandas as pd
 import numpy as np
 from os import listdir
@@ -10,6 +11,8 @@ config_file_path = "data/config_files/motor-range-doppler.cfg"
 configParameters = parseConfigFile(config_file_path, Rx_Ant=4, Tx_Ant=4)
 configParameters["numDopplerBins"] = 16
 configParameters["numRangeBins"] = 128
+
+prob_noise = 0.6  # 60% of frames will have noise
 
 print(configParameters)
 
@@ -70,9 +73,16 @@ for folder_idx, target in enumerate(all_targets):
 
         for col in df_data.columns:
             data = calc_range_doppler(df_data, col, configParameters)
-            # cfar_data = apply_2d_cfar(data, guard_band_width=2, kernel_size=1, threshold_factor=1)
 
             min_max_data = min_max_norm(data)
+
+            num_frames = min_max_data.shape[0]
+
+            noisy_frame_indices = random.sample(range(num_frames), int(prob_noise * num_frames))
+
+            noise = np.random.normal(0, 1, min_max_data.shape) # white noise
+
+            min_max_data[noisy_frame_indices] += noise[noisy_frame_indices]
 
             out_x_range_doppler.append(data)
             out_x_range_doppler_min_max.append(min_max_data)

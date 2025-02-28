@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 
+print(tf.__version__)
+
 range_doppler_features = np.load("data/npz_files/radar-balanced-motor.npz", allow_pickle=True)
 
 x_data, y_data = range_doppler_features['out_x'], range_doppler_features['out_y']
@@ -43,29 +45,24 @@ test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
 #     tf.keras.layers.Dense(classes, activation='softmax')
 # ])
 
-model = tf.keras.models.Sequential([
-    # Input layer
-    tf.keras.layers.Input(shape=(16, 128, 1)),
+model = tf.keras.Sequential([
+    tf.keras.layers.Reshape((16, 128, 1), input_shape=x_train.shape[1:]),
 
-    # First convolutional layer
-    tf.keras.layers.Conv2D(16, (2, 2), activation='relu', padding='same'),
-    tf.keras.layers.MaxPooling2D(pool_size=(2, 3)),  # Pooling in time (2) and frequency (3)
+    tf.keras.layers.Conv2D(16, (3, 3), activation='relu', padding='same'),
+    tf.keras.layers.MaxPooling2D((2, 2)),
 
-    # Second convolutional layer
-    tf.keras.layers.Conv2D(16, (2, 2), activation='relu', padding='same'),
-    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    tf.keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
+    tf.keras.layers.MaxPooling2D((2, 2)),
 
-    # Reshape for GRU input
-    tf.keras.layers.Reshape((4, -1)),  # Reshape to (time_steps, features). Adjust as per final CNN output shape.
+    tf.keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+    tf.keras.layers.MaxPooling2D((2, 2)),
 
-    # GRU layer
-    tf.keras.layers.GRU(30, activation='tanh', return_sequences=False),  # Outputs a single feature vector
+    tf.keras.layers.Reshape((-1, 64)),  # Adjust based on feature map size
+    tf.keras.layers.GRU(100, return_sequences=False),
 
-    # Dense layer
-    tf.keras.layers.Dense(64, activation='relu'),
-
-    # Output layer
-    tf.keras.layers.Dense(classes, activation='softmax')
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dropout(0.25),
+    tf.keras.layers.Dense(3, activation='softmax')  # 3 classes: Motor On, Motor Off, Fan Fault
 ])
 
 
@@ -81,7 +78,7 @@ validation_dataset = validation_dataset.batch(BATCH_SIZE, drop_remainder=False)
 
 history = model.fit(train_dataset, epochs=50, validation_data=validation_dataset)
 
-model.save("saved-model/radar-motor-fault")
+model.save("saved-model/radar-motor-fault.keras")
 
 predicted_labels = model.predict(x_test)
 actual_labels = y_test
