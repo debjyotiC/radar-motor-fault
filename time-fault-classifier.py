@@ -29,9 +29,9 @@ for i in range(len(x_data) - sequence_length + 1):
     x_sequences.append(x_seq)
     y_sequences.append(y_seq)
 
-x_sequences = np.array(x_sequences)  # (samples, 4, 64, 64)
+x_sequences = np.array(x_sequences)  # (samples, 4, 16, 128)
 y_sequences = np.array(y_sequences)
-x_sequences = np.expand_dims(x_sequences, axis=-1) # Add channel dim: (samples, 4, 64, 64, 1)
+x_sequences = np.expand_dims(x_sequences, axis=-1) # Add channel dim: (samples, 4, 16, 128, 1)
 
 # Train/Val/Test split
 train_ratio = 0.80
