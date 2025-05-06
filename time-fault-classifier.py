@@ -1,76 +1,133 @@
 import numpy as np
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, accuracy_score
+import matplotlib.pyplot as plt
 import seaborn as sns
 from os import listdir
-import tensorflow as tf
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix
 
-print(tf.__version__)
-
+# Load data
 range_doppler_features = np.load("data/npz_files/radar-balanced-motor.npz", allow_pickle=True)
 x_data, y_data = range_doppler_features['out_x'], range_doppler_features['out_y']
 
-classes_values = listdir("data/radar-motor")
-classes = len(classes_values)
+# Get class count and names (sorted)
+classes_values = sorted(listdir("data/radar-motor"))
+num_classes = len(classes_values)
+print("Classes:", classes_values)
 
-print(classes_values)
+# One-hot encode labels (assuming labels start from 1)
+y_data = tf.keras.utils.to_categorical(y_data - 1, num_classes)
 
-y_data = tf.keras.utils.to_categorical(y_data - 1, classes)
+# Prepare sequences of 4 frames
+sequence_length = 4
+x_sequences = []
+y_sequences = []
 
-# Splitting data into train, validation, and test sets
-train_ratio = 0.70
-validation_ratio = 0.20
+for i in range(len(x_data) - sequence_length + 1):
+    x_seq = x_data[i:i + sequence_length]
+    y_seq = y_data[i + sequence_length - 1]  # Label from last frame
+    x_sequences.append(x_seq)
+    y_sequences.append(y_seq)
+
+x_sequences = np.array(x_sequences)  # (samples, 4, 64, 64)
+y_sequences = np.array(y_sequences)
+x_sequences = np.expand_dims(x_sequences, axis=-1) # Add channel dim: (samples, 4, 64, 64, 1)
+
+# Train/Val/Test split
+train_ratio = 0.80
+validation_ratio = 0.10
 test_ratio = 0.10
 
-x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=1 - train_ratio)
-x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio / (test_ratio + validation_ratio))
+x_train, x_temp, y_train, y_temp = train_test_split(x_sequences, y_sequences, test_size=1 - train_ratio, shuffle=True)
+x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=test_ratio / (validation_ratio + test_ratio), shuffle=True)
 
-# Add channel dimension for CNN
-x_train = tf.expand_dims(x_train, axis=-1)
-x_val = tf.expand_dims(x_val, axis=-1)
-x_test = tf.expand_dims(x_test, axis=-1)
+# TF datasets
+BATCH_SIZE = 60
+train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(BATCH_SIZE)
+validation_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(BATCH_SIZE)
+test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(BATCH_SIZE)
 
-BATCH = 50
+# --- Squeeze-and-Excitation Block ---
+def se_block(input_tensor, reduction=16):
+    channels = input_tensor.shape[-1]
+    se = tf.keras.layers.GlobalAveragePooling2D()(input_tensor)
+    se = tf.keras.layers.Dense(channels // reduction, activation='relu')(se)
+    se = tf.keras.layers.Dense(channels, activation='sigmoid')(se)
+    se = tf.keras.layers.Reshape((1, 1, channels))(se)
+    return tf.keras.layers.Multiply()([input_tensor, se])
 
-# Create TensorFlow datasets
-train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(BATCH)
-validation_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(BATCH)
-test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(BATCH)
+# --- Shared CNN Feature Extractor ---
+def create_shared_cnn():
+    input_layer = tf.keras.Input(shape=(16, 128, 1))
+    x = tf.keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu')(input_layer)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = se_block(x)
+    x = tf.keras.layers.MaxPooling2D((2, 2))(x)
 
-# Define CNN-GRU Model
-model = tf.keras.Sequential([
-    tf.keras.layers.Reshape((16, 128, 1), input_shape=x_train.shape[1:]),
+    x = tf.keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = se_block(x)
+    x = tf.keras.layers.MaxPooling2D((2, 2))(x)
 
-    tf.keras.layers.Conv2D(16, (3, 3), activation='relu', padding='same'),
-    tf.keras.layers.MaxPooling2D((2, 2)),
+    x = tf.keras.layers.Conv2D(128, (3, 3), padding='same', activation='relu')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = se_block(x)
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
 
-    tf.keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-    tf.keras.layers.MaxPooling2D((2, 2)),
+    return tf.keras.models.Model(input_layer, x, name="shared_cnn")
 
-    # tf.keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-    # tf.keras.layers.MaxPooling2D((2, 2)),
+# --- Temporal Attention Layer ---
+class TemporalAttention(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    tf.keras.layers.Reshape((-1, 64)),  # Adjust based on feature map size
-    tf.keras.layers.GRU(30, return_sequences=False),
+    def build(self, input_shape):
+        feature_dim = input_shape[-1]
+        self.q_dense = tf.keras.layers.Dense(feature_dim)
+        self.k_dense = tf.keras.layers.Dense(feature_dim)
+        self.v_dense = tf.keras.layers.Dense(feature_dim)
 
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dropout(0.25),
-    tf.keras.layers.Dense(classes, activation='softmax')
-])
+    def call(self, x):
+        q = self.q_dense(x)
+        k = self.k_dense(x)
+        v = self.v_dense(x)
 
+        score = tf.matmul(q, k, transpose_b=True)
+        score /= tf.math.sqrt(tf.cast(tf.shape(k)[-1], tf.float32))
+        weights = tf.nn.softmax(score, axis=-1)
+        attention_output = tf.matmul(weights, v)
+        return attention_output
+
+# --- Model Assembly ---
+def build_temporal_attention_model():
+    shared_cnn = create_shared_cnn()
+
+    input_sequence = tf.keras.Input(shape=(4, 16, 128, 1))  # 4 time steps
+    features = tf.keras.layers.TimeDistributed(shared_cnn)(input_sequence)  # (batch, 4, features)
+
+    attention_features = TemporalAttention()(features)  # (batch, 4, features)
+    pooled = tf.keras.layers.GlobalAveragePooling1D()(attention_features)
+
+    x = tf.keras.layers.Dense(128, activation='relu')(pooled)
+    x = tf.keras.layers.Dropout(0.5)(x)
+    output = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+
+    return tf.keras.models.Model(inputs=input_sequence, outputs=output)
+
+# Build and compile model
+model = build_temporal_attention_model()
 model.summary()
 
-# Compile the model
-model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
-              optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-              metrics=['accuracy'])
+model.compile(
+    loss=tf.keras.losses.CategoricalCrossentropy(),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+    metrics=['accuracy']
+)
 
-# Define callbacks
+# Callbacks
 early_stopping = tf.keras.callbacks.EarlyStopping(
     monitor='val_loss', patience=5, restore_best_weights=True
 )
-
 checkpoint = tf.keras.callbacks.ModelCheckpoint(
     "saved-model/best-radar-motor-fault.keras",
     monitor="val_loss",
@@ -78,7 +135,7 @@ checkpoint = tf.keras.callbacks.ModelCheckpoint(
     verbose=1
 )
 
-# Train the model
+# Train
 history = model.fit(
     train_dataset,
     epochs=50,
@@ -86,59 +143,56 @@ history = model.fit(
     callbacks=[early_stopping, checkpoint]
 )
 
-# Load the best model
-model = tf.keras.models.load_model("saved-model/best-radar-motor-fault.keras")
+# Load best model
+model = tf.keras.models.load_model("saved-model/best-radar-motor-fault.keras", custom_objects={'TemporalAttention': TemporalAttention})
 
-# Evaluate on test data
+# Evaluate
 predicted_labels = model.predict(x_test)
-actual_labels = y_test
-
 label_predicted = np.argmax(predicted_labels, axis=1)
-label_actual = np.argmax(actual_labels, axis=1)
+label_actual = np.argmax(y_test, axis=1)
 
-# Compute confusion matrix
+# Confusion matrix & accuracy
 results = confusion_matrix(label_actual, label_predicted)
+acc_score = accuracy_score(label_actual, label_predicted)
+print("Test Accuracy:", round(acc_score, 3))
 
-# Plot training history
+# Training history
 acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 loss = history.history['loss']
 val_loss = history.history['val_loss']
-
-print(f"Training Accuracy: {round(np.max(acc), 3)}")
-print(f"Validation Accuracy: {round(np.max(val_acc), 3)}")
-
 epochs = range(1, len(acc) + 1)
+
+# Plot history
 fig, axs = plt.subplots(2, 1, figsize=(10, 8))
 
-# Plot loss
 axs[0].plot(epochs, loss, '-', label='Training Loss')
 axs[0].plot(epochs, val_loss, 'b', label='Validation Loss')
+axs[0].set_title("Loss")
 axs[0].set_xlabel('Epoch')
 axs[0].set_ylabel('Loss')
+axs[0].legend()
 axs[0].grid(True)
-axs[0].legend(loc='best')
 
-# Plot accuracy
 axs[1].plot(epochs, acc, '-', label='Training Accuracy')
 axs[1].plot(epochs, val_acc, 'b', label='Validation Accuracy')
+axs[1].set_title("Accuracy")
 axs[1].set_xlabel('Epoch')
 axs[1].set_ylabel('Accuracy')
+axs[1].legend()
 axs[1].grid(True)
-axs[1].legend(loc='best')
 
+plt.tight_layout()
 plt.show()
 
-# Confusion Matrix
+# Confusion Matrix Plot
 ax = plt.subplot()
-sns.heatmap(results, annot=True, annot_kws={"size": 20}, ax=ax, fmt='g', cmap='Blues')
+sns.heatmap(results, annot=True, fmt='g', cmap='Blues', ax=ax, annot_kws={"size": 14})
 
-# Labels, title, and ticks
 ax.set_xlabel('Predicted Labels', fontsize=12)
 ax.set_ylabel('True Labels', fontsize=12)
-ax.set_title(f'Confusion Matrix for RADAR Data (Best Accuracy: {round(np.max(acc), 3)})')
-ax.xaxis.set_ticklabels(classes_values, fontsize=15)
-ax.yaxis.set_ticklabels(classes_values, fontsize=15)
+ax.set_xticklabels(classes_values, fontsize=12)
+ax.set_yticklabels(classes_values, fontsize=12)
 plt.tight_layout()
 plt.savefig("data/images/cm.png", dpi=600)
 plt.show()
