@@ -2,3 +2,6 @@
 /test.py
 /saved-model/best-radar-motor-fault.keras
 /saved-model/radar-motor-fault.keras
+/data/npz_files/radar-motor.npz
+/data/npz_files/radar-normalised-motor.npz
+/data/npz_files/radar-balanced-motor.npz
