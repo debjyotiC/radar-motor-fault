@@ -138,7 +138,7 @@ checkpoint = tf.keras.callbacks.ModelCheckpoint(
 # Train
 history = model.fit(
     train_dataset,
-    epochs=50,
+    epochs=10,
     validation_data=validation_dataset,
     callbacks=[early_stopping, checkpoint]
 )

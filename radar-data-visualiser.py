@@ -98,7 +98,8 @@ plt.show()
 #     plt.xlabel("Range (m)")
 #     plt.ylabel("Doppler velocity (m/s)")
 #
-#     # frame = ca_cfar(frame, guard_cells, training_cells, threshold_factor)
+#     # frame = ca_cfar(frame, guard_cells, tra
+#     ining_cells, threshold_factor)
 #
 #     # Plot range-Doppler map with corrected extent
 #     # plt.imshow(frame, extent=[rangeArray.min(), rangeArray.max(), dopplerArray.min(), dopplerArray.max()],
