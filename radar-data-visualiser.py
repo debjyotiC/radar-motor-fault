@@ -12,8 +12,8 @@ config_file_path = "data/config_files/motor-range-doppler.cfg"
 configParameters = parseConfigFile(config_file_path, Rx_Ant=4, Tx_Ant=4)
 
 # Create range and doppler arrays based on the config
-rangeArray = np.array(range(configParameters["numRangeBins"])) * configParameters["rangeIdxToMeters"]
-dopplerArray = np.multiply(np.arange(-configParameters["numDopplerBins"] / 2, configParameters["numDopplerBins"] / 2),
+rangeArray = np.array(range(8)) * configParameters["rangeIdxToMeters"]
+dopplerArray = np.multiply(np.arange(-128 / 2, 128 / 2),
                            configParameters["dopplerResolutionMps"])
 
 # Get folder names

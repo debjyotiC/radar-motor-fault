@@ -7,23 +7,24 @@ configParameters = parseConfigFile("data/config_files/motor-range-doppler.cfg", 
 
 print(configParameters)
 
-data = np.load("data/npz_files/radar-balanced-motor.npz", allow_pickle=True)
+data = np.load("data/npz_files/radar-motor.npz", allow_pickle=True)
 class_labels = listdir("data/radar-motor")
 
 motor_data, motor_label = data['out_x'], data['out_y']
 
-rangeArray = np.array(range(configParameters["numRangeBins"])) * configParameters["rangeIdxToMeters"]
+rangeArray = np.linspace(-1, 1, 16)
+dopplerArray = np.linspace(0, 2, 128)
 
 
-def min_max_norm(mat):
-    min_val = mat.min()
-    max_val = mat.max()
-    normalized_matrix = 2 * (mat - min_val) / (max_val - min_val) - 1
-    return normalized_matrix
+# def min_max_norm(mat):
+#     min_val = mat.min()
+#     max_val = mat.max()
+#     normalized_matrix = 2 * (mat - min_val) / (max_val - min_val) - 1
+#     return normalized_matrix
 
 
 for count, frame in enumerate(motor_data):
     plt.clf()
     plt.title(f"Frame no. {count} has label {class_labels[motor_label[count] - 1]}")
-    plt.contourf(min_max_norm(frame))
+    plt.contourf(dopplerArray, rangeArray, frame)
     plt.pause(0.5)
