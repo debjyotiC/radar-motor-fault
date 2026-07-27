@@ -13,7 +13,7 @@ motor_data, motor_label = data['out_x'], data['out_y']
 rangeArray = np.linspace(-1, 1, 128)
 dopplerArray = np.linspace(0, 2, 128)
 
-label_pos = 1
+label_pos = 3
 pos = 1
 
 motor_data = motor_data[motor_label == label_pos][pos]
@@ -39,7 +39,7 @@ edges_sobel = np.uint8(255 * edges_sobel / np.max(edges_sobel))  # Normalize to 
 
 # --- Side-by-Side Plotting ---
 fig, axes = plt.subplots(1, 4, figsize=(18, 4.5))
-fig.suptitle(f"Frame no. {pos} - Label: {class_labels[motor_label - 1]}", fontsize=14, fontweight='bold')
+# fig.suptitle(f"Frame no. {pos} - Label: {class_labels[motor_label - 1]}", fontsize=14, fontweight='bold')
 
 # 1. Original Raw Radar Matrix
 axes[0].contourf(dopplerArray, rangeArray, upscale_img, levels=100, cmap='seismic')
