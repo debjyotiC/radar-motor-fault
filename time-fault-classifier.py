@@ -7,7 +7,7 @@ import seaborn as sns
 from os import listdir
 
 # Load data
-range_doppler_features = np.load("data/npz_files/radar-balanced-motor.npz", allow_pickle=True)
+range_doppler_features = np.load("data/npz_files/radar-motor.npz", allow_pickle=True)
 x_data, y_data = range_doppler_features['out_x'], range_doppler_features['out_y']
 
 # Get class count and names (sorted)
@@ -42,7 +42,7 @@ x_train, x_temp, y_train, y_temp = train_test_split(x_sequences, y_sequences, te
 x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=test_ratio / (validation_ratio + test_ratio), shuffle=True)
 
 # TF datasets
-BATCH_SIZE = 60
+BATCH_SIZE = 5
 train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(BATCH_SIZE)
 validation_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val)).batch(BATCH_SIZE)
 test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(BATCH_SIZE)
@@ -120,7 +120,7 @@ model.summary()
 
 model.compile(
     loss=tf.keras.losses.CategoricalCrossentropy(),
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
     metrics=['accuracy']
 )
 
@@ -138,7 +138,7 @@ checkpoint = tf.keras.callbacks.ModelCheckpoint(
 # Train
 history = model.fit(
     train_dataset,
-    epochs=10,
+    epochs=50,
     validation_data=validation_dataset,
     callbacks=[early_stopping, checkpoint]
 )
