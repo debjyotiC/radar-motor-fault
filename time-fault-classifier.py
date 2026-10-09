@@ -120,7 +120,7 @@ model.summary()
 
 model.compile(
     loss=tf.keras.losses.CategoricalCrossentropy(),
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001),
     metrics=['accuracy']
 )
 
@@ -138,7 +138,7 @@ checkpoint = tf.keras.callbacks.ModelCheckpoint(
 # Train
 history = model.fit(
     train_dataset,
-    epochs=50,
+    epochs=200,
     validation_data=validation_dataset,
     callbacks=[early_stopping, checkpoint]
 )
